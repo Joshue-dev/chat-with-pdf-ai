@@ -2,22 +2,26 @@ import { Icon } from "@iconify/react";
 
 const Header = () => {
   return (
-    <header className="flex items-center justify-between bg-white p-4 fixed top-0 left-0 w-full z-10">
-      <button
-        className="mobile-menu-button lg:hidden"
-        // onClick={onMenu}
-        aria-label="Open conversations"
-      >
-        <Icon icon="andrsrxn:menu-burger" />
-      </button>
-      <div className="model-switcher">
-        <span>⚡ GPT-3.5</span>
-        <strong>✣ GPT-4</strong>
-        <span>AI Claude</span>
-        <span>AI Claude 2</span>
-      </div>
-      <div className="header-actions">
-        <button className="lang">EN ↑</button>
+    <header className="left-0 top-0 fixed w-full">
+      <div className="flex *:items-center justify-between px-4 py-2">
+        <div className="flex gap-4">
+          <Icon icon='arcticons:document-scanner' />
+          <button className="new-doc" aria-label="Create new document">
+            <Icon icon="ri:chat-new-line" />
+          </button>
+        </div>
+        <nav className="flex items-center space-x-2" aria-label="Document settings">
+          <button className="flex items-center gap-1" aria-label="Select model">
+            <Icon icon="grommet-icons:globe" />
+            GPT-3.5 <Icon icon="carbon:chevron-down" />
+          </button>
+          <button className="language">
+            <span>🇬🇧</span> EN
+          </button>
+          <button aria-label="Toggle dark mode">
+            <Icon icon="ant-design:moon-outlined" />
+          </button>
+        </nav>
       </div>
     </header>
   );
