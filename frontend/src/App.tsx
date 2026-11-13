@@ -6,9 +6,9 @@ import { ChatPage } from "./ui/chatPage";
 
 function App() {
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-gray-100">
+    <main className="relative h-dvh w-screen overflow-hidden bg-[#fcfcfe] text-[#1a1a1c]">
       {/* <Header /> */}
-      <div className="flex flex-col w-full h-full">
+      <div className="flex h-full min-h-0 w-full flex-col">
         <ChatPage />
       </div>
     </main>
