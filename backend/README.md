@@ -1,114 +1,396 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Chat with PDF AI - Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS backend for secure document upload to OpenAI and chat completions with file context.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+- **Document Management**: Upload, list, retrieve, download, and delete documents via OpenAI Files API
+- **Chat Completions**: Create chat completions with optional file context
+- **File Validation**: Automatic validation of file size, MIME type, and extension
+- **Security**: API keys stored in environment variables, input validation, proper error handling
+- **API Documentation**: Swagger UI at `/docs`
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Quick Start
 
-## Project setup
+### Prerequisites
+
+- Node.js 20+
+- Bun (recommended) or npm
+- OpenAI API key
+
+### Installation
 
 ```bash
-$ bun install
+# Install dependencies
+bun install
+
+# Configure environment
+cp .env.example .env
+# Edit .env and add your OPENAI_API_KEY
 ```
 
-## Compile and run the project
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | **Required** Your OpenAI API key | - |
+| `OPENAI_ORGANIZATION` | OpenAI organization ID | - |
+| `OPENAI_PROJECT` | OpenAI project ID | - |
+| `OPENAI_API_BASE_URL` | Custom OpenAI base URL | `https://api.openai.com/v1` |
+| `OPENAI_CHAT_MODEL` | Default chat model | `gpt-4o` |
+| `MAX_TOKENS` | Max completion tokens | `4096` |
+| `TEMPERATURE` | Sampling temperature | `0.7` |
+| `MAX_FILE_SIZE` | Max upload size (bytes) | `10485760` (10MB) |
+| `PORT` | Server port | `3000` |
+| `NODE_ENV` | Environment | `development` |
+| `CORS_ORIGIN` | Allowed origins (comma-separated) | `http://localhost:3000,http://localhost:5173` |
+
+### Running the Server
 
 ```bash
-# development
-$ bun run start
+# Development (with hot reload)
+bun run start:dev
 
-# watch mode
-$ bun run start:dev
-
-# production mode
-$ bun run start:prod
+# Production
+bun run build
+bun run start:prod
 ```
 
-## Run tests
+Server runs at `http://localhost:3000`  
+API Documentation at `http://localhost:3000/docs`
+
+---
+
+## API Endpoints
+
+All endpoints are prefixed with `/api/v1` (versioned via URI).
+
+### Document Upload
+
+#### Upload Single Document
 
 ```bash
-# unit tests
-$ bun run test
-
-# e2e tests
-$ bun run test:e2e
-
-# test coverage
-$ bun run test:cov
+curl -X POST http://localhost:3000/api/v1/documents/upload \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@/path/to/document.pdf" \
+  -F "purpose=assistants"
 ```
 
-## Deployment
+**Response (201 Created):**
+```json
+{
+  "id": "file-abc123",
+  "object": "file",
+  "bytes": 102400,
+  "createdAt": 1700000000,
+  "filename": "document.pdf",
+  "purpose": "assistants",
+  "status": "processed",
+  "statusDetails": null
+}
+```
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+**Parameters:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | File | Yes | Document file (max 10MB) |
+| `purpose` | string | No | `assistants`, `batch`, `vision`, or `fine-tune` (default: `assistants`) |
+| `name` | string | No | Custom name (max 255 chars) |
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+**Allowed File Types:** PDF, TXT, CSV, MD, JSON, DOC, DOCX
+
+---
+
+#### Upload Multiple Documents
 
 ```bash
-$ bun install -g @nestjs/mau
-$ mau deploy
+curl -X POST http://localhost:3000/api/v1/documents/upload/multiple \
+  -H "Content-Type: multipart/form-data" \
+  -F "files=@/path/to/doc1.pdf" \
+  -F "files=@/path/to/doc2.txt" \
+  -F "purpose=assistants"
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+**Response (201 Created):**
+```json
+[
+  {
+    "id": "file-abc123",
+    "object": "file",
+    "bytes": 102400,
+    "createdAt": 1700000000,
+    "filename": "doc1.pdf",
+    "purpose": "assistants",
+    "status": "processed",
+    "statusDetails": null
+  },
+  {
+    "id": "file-def456",
+    "object": "file",
+    "bytes": 51200,
+    "createdAt": 1700000001,
+    "filename": "doc2.txt",
+    "purpose": "assistants",
+    "status": "processed",
+    "statusDetails": null
+  }
+]
+```
 
-## Observability
+---
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+### Document Management
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+#### List Documents
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+```bash
+# List all
+curl http://localhost:3000/api/v1/documents
 
-## Resources
+# With filters
+curl "http://localhost:3000/api/v1/documents?purpose=assistants&limit=10&after=file-abc123"
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `purpose` | string | - | Filter by purpose |
+| `limit` | number | 20 | Max results (1-100) |
+| `after` | string | - | Pagination cursor |
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": "file-abc123",
+      "object": "file",
+      "bytes": 102400,
+      "createdAt": 1700000000,
+      "filename": "document.pdf",
+      "purpose": "assistants",
+      "status": "processed",
+      "statusDetails": null
+    }
+  ],
+  "object": "list"
+}
+```
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+#### Get Document Details
 
-## Stay in touch
+```bash
+curl http://localhost:3000/api/v1/documents/file-abc123
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+**Response (200 OK):**
+```json
+{
+  "id": "file-abc123",
+  "object": "file",
+  "bytes": 102400,
+  "createdAt": 1700000000,
+  "filename": "document.pdf",
+  "purpose": "assistants",
+  "status": "processed",
+  "statusDetails": null
+}
+```
+
+---
+
+#### Download Document Content
+
+```bash
+curl http://localhost:3000/api/v1/documents/file-abc123/content \
+  --output document.pdf
+```
+
+Returns the raw file content as binary stream.
+
+---
+
+#### Delete Document
+
+```bash
+curl -X DELETE http://localhost:3000/api/v1/documents/file-abc123
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": "file-abc123",
+  "deleted": true
+}
+```
+
+---
+
+### Chat Completions
+
+#### Basic Chat Completion
+
+```bash
+curl -X POST http://localhost:3000/api/v1/documents/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Explain quantum computing in simple terms."}
+    ],
+    "model": "gpt-4o",
+    "temperature": 0.7,
+    "maxTokens": 2000
+  }'
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "gpt-4o-2024-05-13",
+  "content": "Quantum computing uses quantum bits (qubits) that can exist in multiple states simultaneously...",
+  "role": "assistant",
+  "finishReason": "stop",
+  "usage": {
+    "promptTokens": 25,
+    "completionTokens": 150,
+    "totalTokens": 175
+  }
+}
+```
+
+**Request Body:**
+```typescript
+{
+  messages: Array<{
+    role: 'system' | 'user' | 'assistant' | 'tool';
+    content: string;
+    name?: string;
+  }>;
+  fileIds?: string[];           // OpenAI file IDs for context
+  model?: string;               // Default: gpt-4o
+  maxTokens?: number;           // 1-128000, default: 4096
+  temperature?: number;         // 0-2, default: 0.7
+  topP?: number;                // 0-1, nucleus sampling
+  stream?: boolean;             // Default: false
+}
+```
+
+---
+
+#### Chat with File Context
+
+Upload documents first, then reference them in chat:
+
+```bash
+# 1. Upload a document
+FILE_ID=$(curl -s -X POST http://localhost:3000/api/v1/documents/upload \
+  -F "file=@research.pdf" \
+  -F "purpose=assistants" | jq -r '.id')
+
+# 2. Chat with the document
+curl -X POST http://localhost:3000/api/v1/documents/chat/with-files \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"messages\": [
+      {\"role\": \"system\", \"content\": \"Answer questions based on the uploaded documents.\"},
+      {\"role\": \"user\", \"content\": \"What are the key findings in this research?\"}
+    ],
+    \"fileIds\": [\"$FILE_ID\"],
+    \"model\": \"gpt-4o\"
+  }"
+```
+
+**Note:** The `/chat/with-files` endpoint is designed for future integration with OpenAI's Assistants API (file_search tool). Currently delegates to standard chat completion.
+
+---
+
+## Error Responses
+
+All errors follow a consistent format:
+
+```json
+{
+  "code": "ERROR_CODE",
+  "message": "Human-readable error message",
+  "statusCode": 400,
+  "details": {}
+}
+```
+
+### Common Error Codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `BAD_REQUEST` | Invalid input, file validation failed |
+| 401 | `UNAUTHORIZED` | Invalid or missing OpenAI API key |
+| 404 | `NOT_FOUND` | Document not found |
+| 413 | `PAYLOAD_TOO_LARGE` | File exceeds size limit |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | File type not allowed |
+| 429 | `RATE_LIMIT` | OpenAI rate limit exceeded |
+| 500 | `INTERNAL_ERROR` | Server or OpenAI service error |
+| 503 | `SERVICE_UNAVAILABLE` | OpenAI temporarily unavailable |
+
+---
+
+## File Validation Rules
+
+| Rule | Default | Configurable Via |
+|------|---------|------------------|
+| Max file size | 10 MB | `MAX_FILE_SIZE` |
+| Allowed MIME types | PDF, TXT, CSV, MD, JSON, DOC, DOCX | `app.upload.allowedMimeTypes` |
+| Allowed extensions | .pdf, .txt, .csv, .md, .json, .doc, .docx | `app.upload.allowedExtensions` |
+
+---
+
+## Development
+
+### Project Structure
+
+```
+src/
+├── config/
+│   └── configuration.ts       # Centralized config
+├── documents/
+│   ├── dto/                   # Data Transfer Objects
+│   │   ├── upload-document.dto.ts
+│   │   ├── chat-completion.dto.ts
+│   │   ├── response.dto.ts
+│   │   └── index.ts
+│   ├── guards/
+│   │   └── file-validation.pipe.ts  # File validation
+│   ├── documents.controller.ts      # REST endpoints
+│   ├── documents.service.ts         # OpenAI integration
+│   └── documents.module.ts          # Module definition
+├── app.module.ts              # Root module
+└── main.ts                    # App bootstrap + Swagger
+```
+
+### Commands
+
+```bash
+# Lint
+bun run lint
+
+# Format
+bun run format
+
+# Test
+bun run test
+bun run test:watch
+bun run test:cov
+
+# Build
+bun run build
+```
+
+---
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT
