@@ -37,7 +37,7 @@ function App() {
   const hasActiveSession = document !== null || messages.length > 2 || value.trim().length > 0;
 
   return (
-    <main className="relative h-dvh w-screen overflow-hidden bg-[#fcfcfe] dark:bg-[#141416] text-[#1a1a1c] dark:text-white">
+    <main className="relative h-screen w-screen overflow-hidden bg-[#fcfcfe] dark:bg-[#141416] text-[#1a1a1c] dark:text-white">
       <Header
         isDark={isDark}
         onToggleTheme={toggleTheme}
@@ -46,17 +46,16 @@ function App() {
       />
       <div style={{ paddingTop: headerHeight }} className="h-full">
         {document ? (
-          <div className="flex h-full min-h-0 w-full flex-col md:flex-row">
-            <ChatPanel
-            />
+          <div className="flex h-full w-full overflow-hidden md:flex-row">
+            <ChatPanel />
             <DocumentPanel
               document={document}
               onClose={handleCloseDocument}
             />
           </div>
         ) : (
-          <div className="flex h-full min-h-0 w-full flex-col md:flex-row">
-            <div className="flex min-h-0 w-full flex-1 flex-col md:w-1/2 md:flex-none">
+          <div className="flex h-full w-full overflow-hidden md:flex-row">
+            <div className="flex h-full w-full flex-1 flex-col md:w-1/2 md:flex-none overflow-hidden">
               <h2 className="sr-only">Welcome</h2>
               <DocumentUploadArea onUpload={handleUpload} />
             </div>
