@@ -1,111 +1,377 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import "tailwindcss";
+@import "@iamjariwala/react-doc-viewer/dist/index.css";
+@custom-variant dark (&:where(.dark, .dark *));
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+/* ============================================================================
+   Custom styles for @iamjariwala/react-doc-viewer
+   Overrides library's internal toolbar to match our viewer-toolbar design system
+   ============================================================================ */
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+/* Hide library's default file name element */
+#file-name {
+  visibility: hidden;
+  display: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+/* ----------------------------------------------------------------------------
+   PDF Controls Toolbar (replaces library's .rdv-pdf-controls)
+   Matches our .viewer-toolbar exactly
+   ---------------------------------------------------------------------------- */
+#pdf-controls.rdv-pdf-controls {
+  @apply flex shrink-0 items-center justify-between gap-2 px-4 py-2
+         border-b border-[#e4e4e7] dark:border-[#3a3a3e]
+         bg-white/80 dark:bg-[#141416]/80 backdrop-blur-md flex-wrap;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+/* Toolbar inner layout */
+#pdf-controls.rdv-pdf-controls > .rdv-toolbar-inner {
+  @apply flex w-full items-center justify-between gap-2;
+}
+
+/* Toolbar groups (page nav, zoom, actions) */
+.rdv-toolbar-group {
+  @apply flex items-center gap-1;
+}
+
+/* Dividers between groups */
+.rdv-toolbar-divider {
+  @apply w-px h-8 bg-[#e4e4e7] dark:bg-[#3a3a3e] mx-1;
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------------------------
+   Toolbar Buttons (matches our icon button pattern: grid size-10)
+   ---------------------------------------------------------------------------- */
+.rdv-toolbar-btn {
+  @apply grid size-10 cursor-pointer place-items-center rounded-lg
+         text-[#8a8a8c] dark:text-[#8a8a8c]
+         transition hover:bg-[#f3f3f5] hover:text-[#1a1a1c]
+         dark:hover:bg-[#2a2a2e] dark:hover:text-white
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/35
+         disabled:opacity-40 disabled:cursor-not-allowed;
+
+  /* Override library defaults */
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
+  border-radius: 0.5rem !important;
+  flex-shrink: 0;
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
+/* Button hover/active states */
+.rdv-toolbar-btn:hover {
+  @apply bg-[#f3f3f5] text-[#1a1a1c] dark:bg-[#2a2a2e] dark:text-white;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+.rdv-toolbar-btn:active {
+  @apply bg-[#e8e8ec] dark:bg-[#3a3a3e];
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+.rdv-toolbar-btn:focus-visible {
+  @apply outline-none ring-2 ring-[#5314a1]/35;
+}
+
+.rdv-toolbar-btn:disabled {
+  @apply opacity-40 cursor-not-allowed;
+}
+
+/* SVG icons inside buttons - match our 22x22 size */
+.rdv-toolbar-btn svg,
+.rdv-toolbar-btn .iconify {
+  @apply size-[22px];
+}
+
+/* ----------------------------------------------------------------------------
+   Page Navigation Input
+   ---------------------------------------------------------------------------- */
+.rdv-toolbar-page-info {
+  @apply flex items-center gap-1 px-2;
+}
+
+.rdv-toolbar-page-input {
+  @apply w-14 text-center text-sm text-[#1a1a1c] dark:text-white
+         bg-transparent border-none focus:outline-none
+         focus:ring-1 focus:ring-[#5314a1] rounded
+         font-mono tabular-nums;
+
+  /* Override library defaults */
+  width: 56px !important;
+  height: 28px !important;
+  padding: 0 4px !important;
+  font-size: 13px !important;
+  font-family: inherit !important;
+  font-variant-numeric: tabular-nums !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  color: inherit !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
+}
+
+.rdv-toolbar-page-input:hover {
+  @apply border-[#d5d5d8] dark:border-[#3a3a3e];
+}
+
+.rdv-toolbar-page-input:focus {
+  @apply border-[#5314a1] ring-1 ring-[#5314a1] bg-white dark:bg-[#1e1e20];
+}
+
+.rdv-toolbar-page-total {
+  @apply text-sm text-[#8a8a8c] dark:text-[#8a8a8c] font-mono tabular-nums
+         whitespace-nowrap select-none;
+
+  /* Override library defaults */
+  font-size: 13px !important;
+  font-variant-numeric: tabular-nums !important;
+  color: #8a8a8c !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Zoom Label
+   ---------------------------------------------------------------------------- */
+.rdv-toolbar-zoom-label {
+  @apply px-2 text-sm text-[#8a8a8c] dark:text-[#8a8a8c] font-mono
+         min-w-[3.5rem] text-center select-none;
+
+  /* Override library defaults */
+  font-size: 12px !important;
+  font-variant-numeric: tabular-nums !important;
+  color: #8a8a8c !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+  min-width: 3.5rem !important;
+  text-align: center !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Search Bar (matches our input styling)
+   ---------------------------------------------------------------------------- */
+.rdv-search-bar {
+  @apply flex items-center gap-2 px-3 py-2
+         bg-white/80 dark:bg-[#141416]/80 backdrop-blur-md
+         border-b border-[#e4e4e7] dark:border-[#3a3a3e];
+}
+
+.rdv-search-input {
+  @apply flex-1 min-w-[120px] max-w-[280px] h-9 px-3 text-sm
+         bg-white dark:bg-[#1e1e20]
+         border border-[#e4e4e7] dark:border-[#3a3a3e]
+         rounded-lg text-[#1a1a1c] dark:text-white
+         placeholder:text-[#b0b0b4] dark:placeholder:text-[#6a6a6e]
+         focus:outline-none focus:ring-2 focus:ring-[#5314a1]/35 focus:border-[#5314a1]
+         transition-colors;
+
+  /* Override library defaults */
+  flex: 1 !important;
+  min-width: 120px !important;
+  max-width: 280px !important;
+  height: 36px !important;
+  padding: 0 12px !important;
+  font-size: 13px !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  border-radius: 6px !important;
+  outline: none !important;
+  background: rgba(0, 0, 0, 0.03) !important;
+  color: #1f2937 !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.rdv-search-input:focus {
+  @apply border-[#5314a1] ring-2 ring-[#5314a1]/35 bg-white dark:bg-[#1e1e20];
+}
+
+.rdv-search-count {
+  @apply text-xs text-[#8a8a8c] dark:text-[#8a8a8c] whitespace-nowrap
+         min-w-[60px] text-center select-none;
+}
+
+/* ----------------------------------------------------------------------------
+   Header Bar (we disable this via config, but style for consistency)
+   ---------------------------------------------------------------------------- */
+.rdv-header-bar {
+  @apply flex items-center justify-end px-4 py-2
+         bg-white/80 dark:bg-[#141416]/80 backdrop-blur-md
+         border-b border-[#e4e4e7] dark:border-[#3a3a3e]
+         min-h-[48px];
+}
+
+/* ----------------------------------------------------------------------------
+   Thumbnail Toggle Button
+   ---------------------------------------------------------------------------- */
+.rdv-thumbnail-toggle {
+  @apply grid size-10 cursor-pointer place-items-center rounded-lg
+         text-[#8a8a8c] dark:text-[#8a8a8c]
+         transition hover:bg-[#f3f3f5] hover:text-[#1a1a1c]
+         dark:hover:bg-[#2a2a2e] dark:hover:text-white
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/35;
+
+  /* Override library defaults */
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
+  border-radius: 0.5rem !important;
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------------------------
+   Document Navigation (multi-file)
+   ---------------------------------------------------------------------------- */
+.rdv-doc-nav {
+  @apply flex items-center gap-2 min-w-0;
+}
+
+.rdv-doc-nav-btn-prev,
+.rdv-doc-nav-btn-next {
+  @apply grid size-10 cursor-pointer place-items-center rounded-lg
+         text-[#8a8a8c] dark:text-[#8a8a8c]
+         transition hover:bg-[#f3f3f5] hover:text-[#1a1a1c]
+         dark:hover:bg-[#2a2a2e] dark:hover:text-white
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/35
+         disabled:opacity-40 disabled:cursor-not-allowed;
+
+  width: 40px !important;
+  height: 40px !important;
+  margin: 0 !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Dark mode overrides (handled by @custom-variant, but explicit for library)
+   ---------------------------------------------------------------------------- */
+#react-doc-viewer[data-theme="dark"] .rdv-toolbar-btn {
+  @apply text-[#8a8a8c];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-toolbar-btn:hover {
+  @apply bg-[#2a2a2e] text-white;
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-toolbar-btn:active {
+  @apply bg-[#3a3a3e];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-toolbar-divider {
+  @apply bg-[#3a3a3e];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-toolbar-page-input {
+  @apply bg-transparent border-none text-white;
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-toolbar-page-input:hover {
+  @apply border-[#3a3a3e];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-toolbar-page-input:focus {
+  @apply border-[#5314a1] bg-[#1e1e20];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-toolbar-page-total {
+  @apply text-[#8a8a8c];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-toolbar-zoom-label {
+  @apply text-[#8a8a8c];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-search-bar {
+  @apply bg-[#141416]/80 border-[#3a3a3e];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-search-input {
+  @apply bg-[#1e1e20] border-[#3a3a3e] text-white placeholder:text-[#6a6a6e];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-search-input:focus {
+  @apply border-[#5314a1] bg-[#1e1e20];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-search-count {
+  @apply text-[#8a8a8c];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-thumbnail-toggle {
+  @apply text-[#8a8a8c];
+}
+
+#react-doc-viewer[data-theme="dark"] .rdv-thumbnail-toggle:hover {
+  @apply bg-[#2a2a2e] text-white;
+}
+
+/* ----------------------------------------------------------------------------
+   Responsive adjustments
+   ---------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .rdv-toolbar-btn,
+  .rdv-thumbnail-toggle,
+  .rdv-doc-nav-btn-prev,
+  .rdv-doc-nav-btn-next {
+    @apply size-9;
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .rdv-toolbar-btn svg,
+  .rdv-toolbar-btn .iconify {
+    @apply size-[20px];
+  }
+
+  .rdv-toolbar-page-input {
+    @apply w-12 text-xs;
+    width: 48px !important;
+    height: 24px !important;
+    font-size: 11px !important;
+  }
+
+  .rdv-toolbar-page-total,
+  .rdv-toolbar-zoom-label {
+    @apply text-xs;
+    font-size: 11px !important;
+  }
+
+  .rdv-toolbar-zoom-label {
+    @apply min-w-[2.5rem];
+    min-width: 2.5rem !important;
+  }
+
+  .rdv-toolbar-divider {
+    @apply h-6;
+    height: 16px !important;
+  }
+
+  .rdv-search-input {
+    @apply max-w-[200px] text-xs;
+    max-width: 200px !important;
+    font-size: 11px !important;
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+/* ----------------------------------------------------------------------------
+   Print styles - hide toolbar
+   ---------------------------------------------------------------------------- */
+@media print {
+  .rdv-pdf-controls,
+  .rdv-header-bar,
+  .rdv-thumbnail-sidebar,
+  .rdv-annotation-toolbar,
+  .rdv-bookmarks-sidebar,
+  .rdv-search-bar,
+  .rdv-dropzone-overlay,
+  .rdv-selection-toolbar {
+    display: none !important;
   }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }
