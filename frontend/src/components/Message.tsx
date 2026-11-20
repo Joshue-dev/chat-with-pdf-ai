@@ -149,21 +149,18 @@ export function MessageActions({ text }: { text: string }) {
   );
 }
 
-export function WelcomeMessage({
+export function EmptyStateMessage({
+  suggestedQuestions,
   onAsk,
 }: {
+  suggestedQuestions: string[];
   onAsk: (question: string) => void;
 }) {
   const intro = [
-    "Hello, I am a multilingual document assistant here to help you with any questions you may have about the document you have uploaded.",
-    "The document is a proposal by Stephen Jude for the GOAT Token, which involves a UI/UX redesign for the landing page. The goal is to create a visually appealing and user-centric interface that aligns with the brand's identity and values.",
+    "Hello! I'm your document assistant. Upload a document to get started, and I'll help you understand its contents.",
+    "Once you upload a document, I can answer questions about it, provide summaries, and help you find specific information.",
   ];
-  const suggestions = [
-    "What is Stephen Jude's approach to developing digital solutions?",
-    "What are the key components of the product design strategy for the GOAT Token proposal?",
-    "How does the proposal aim to ensure accessibility and responsiveness across various devices?",
-  ];
-  const closing = "Please feel free to ask me a question about the document!";
+  const closing = "Upload a document to begin!";
 
   return (
     <article className="flex items-start gap-4" aria-label="Assistant introduction">
@@ -176,23 +173,25 @@ export function WelcomeMessage({
           ))}
         </div>
         <MessageActions text={intro.join("\n\n")} />
-        <div className="mt-6 text-[15px] leading-6 text-[#1a1a1c] dark:text-white">
-          <p>Possible questions you can ask:</p>
-          <div className="mt-1 flex flex-col items-start gap-1">
-            {suggestions.map((question, index) => (
-              <button
-                key={question}
-                type="button"
-                className="cursor-pointer rounded-sm text-left text-[#1a1a1c] dark:text-white underline decoration-[#1a1a1c] dark:decoration-white underline-offset-[3px] hover:text-[#5314a1] hover:decoration-[#5314a1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/35 active:text-[#3b0d78]"
-                onClick={() => onAsk(question)}
-              >
-                {index + 1}. {question}
-              </button>
-            ))}
+        {suggestedQuestions.length > 0 && (
+          <div className="mt-6 text-[15px] leading-6 text-[#1a1a1c] dark:text-white">
+            <p>Suggested questions:</p>
+            <div className="mt-1 flex flex-col items-start gap-1">
+              {suggestedQuestions.map((question, index) => (
+                <button
+                  key={question}
+                  type="button"
+                  className="cursor-pointer rounded-sm text-left text-[#1a1a1c] dark:text-white underline decoration-[#1a1a1c] dark:decoration-white underline-offset-[3px] hover:text-[#5314a1] hover:decoration-[#5314a1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/35 active:text-[#3b0d78]"
+                  onClick={() => onAsk(question)}
+                >
+                  {index + 1}. {question}
+                </button>
+              ))}
+            </div>
+            <p className="mt-5">{closing}</p>
           </div>
-          <p className="mt-5">{closing}</p>
-        </div>
-        <MessageActions text={[...suggestions.map((question, index) => `${index + 1}. ${question}`), closing].join("\n")} />
+        )}
+        <MessageActions text={suggestedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")} />
       </div>
     </article>
   );
@@ -244,7 +243,7 @@ export function ChatMessage({ message }: { message: ConversationMessage }) {
 
 export function TypingIndicator() {
   return (
-    <article className="flex items-start gap-4" aria-label="Assistant is typing a simulated reply">
+    <article className="flex items-start gap-4" aria-label="Assistant is typing">
       <AssistantAvatar />
       <div className="min-w-0 max-w-[85%]">
         <div className="w-fit rounded-2xl bg-[#f5f5f7] dark:bg-[#2a2a2e] px-4 py-2.5">

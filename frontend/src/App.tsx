@@ -5,27 +5,39 @@ import { DocumentPanel } from "./components/DocumentPanel";
 import { EmptyState } from "./components/EmptyState";
 import { ChatPanel } from "./components/ChatPanel";
 import { useDarkMode } from "./hooks/useDarkMode";
-import { useChat } from "./hooks/useChat";
 import { createDocumentFromFile, revokeDocumentUrl } from "./utils/fileUtils";
+import { uploadDocument } from "./services/api";
 import type { IDocument } from "@iamjariwala/react-doc-viewer";
 
 function App() {
   const [document, setDocument] = useState<IDocument | null>(null);
+  const [documentId, setDocumentId] = useState<string | null>(null);
   const [isDark, toggleTheme] = useDarkMode();
-  const { messages, resetChat } = useChat();
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [value, setValue] = useState("");
 
-  const handleUpload = useCallback((file: File) => {
-    const newDocument = createDocumentFromFile(file);
-    setDocument(newDocument);
-    resetChat();
-  }, [resetChat]);
+  const handleUpload = useCallback(async (file: File) => {
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const result = await uploadDocument(file);
+      const newDocument = createDocumentFromFile(file);
+      setDocument(newDocument);
+      setDocumentId(result.document.id);
+      setUploadError(null);
+    } catch (error) {
+      setUploadError((error as Error).message);
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
 
   const handleCloseDocument = useCallback(() => {
     revokeDocumentUrl(document);
     setDocument(null);
-    resetChat();
-  }, [document, resetChat]);
+    setDocumentId(null);
+  }, [document]);
 
   const handleNewChat = useCallback(() => {
     handleCloseDocument();
@@ -34,7 +46,7 @@ function App() {
 
   const headerHeight = useMemo(() => 60, []);
 
-  const hasActiveSession = document !== null || messages.length > 2 || value.trim().length > 0;
+  const hasActiveSession = document !== null || value.trim().length > 0;
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-[#fcfcfe] dark:bg-[#141416] text-[#1a1a1c] dark:text-white">
@@ -47,7 +59,7 @@ function App() {
       <div style={{ paddingTop: headerHeight }} className="h-full">
         {document ? (
           <div className="flex h-full w-full overflow-hidden md:flex-row">
-            <ChatPanel />
+            <ChatPanel fileIds={documentId ? [documentId] : []} />
             <DocumentPanel
               document={document}
               onClose={handleCloseDocument}
@@ -57,7 +69,7 @@ function App() {
           <div className="flex h-full w-full overflow-hidden md:flex-row">
             <div className="flex h-full w-full flex-1 flex-col md:w-1/2 md:flex-none overflow-hidden">
               <h2 className="sr-only">Welcome</h2>
-              <DocumentUploadArea onUpload={handleUpload} />
+              <DocumentUploadArea onUpload={handleUpload} isUploading={isUploading} error={uploadError} />
             </div>
             <EmptyState />
           </div>

@@ -17,6 +17,17 @@ import {
 
 type FilePurpose = 'assistants' | 'batch' | 'vision' | 'fine-tune';
 
+export interface SuggestedQuestion {
+  id: string;
+  question: string;
+}
+
+export interface StreamCallbacks {
+  onChunk: (chunk: string) => void;
+  onComplete: () => void;
+  onError: (error: Error) => void;
+}
+
 @Injectable()
 export class DocumentsService {
   private readonly logger = new Logger(DocumentsService.name);
@@ -41,6 +52,89 @@ export class DocumentsService {
     });
 
     this.logger.log('OpenAI client initialized');
+  }
+
+  async getSuggestedQuestions(fileId: string): Promise<SuggestedQuestion[]> {
+    try {
+      this.logger.log(`Generating suggested questions for document: ${fileId}`);
+
+      // Retrieve the document to get its content
+      const document = await this.client.files.retrieve(fileId);
+      const content = await this.client.files.content(fileId);
+      const text = await content.text();
+
+      // Generate suggested questions using OpenAI
+      const response = await this.client.chat.completions.create({
+        model: this.configService.get<string>('app.chat.defaultModel', 'gpt-4o'),
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful assistant that generates exactly 3 relevant, specific questions a user might ask about a document.
+            The questions should be based on the document content and be useful for understanding the document.
+            Return ONLY a JSON array of 3 objects with "id" and "question" fields. Example:
+            [
+              {"id": "1", "question": "What is the main topic of this document?"},
+              {"id": "2", "question": "What are the key findings?"},
+              {"id": "3", "question": "What are the recommendations?"}
+            ]`,
+          },
+          {
+            role: 'user',
+            content: `Generate 3 suggested questions for this document (filename: ${document.filename}):\n\n${text.slice(0, 8000)}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+        response_format: { type: 'json_object' },
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{"questions": []}');
+      return result.questions || [];
+    } catch (error) {
+      this.logger.error(`Failed to generate suggested questions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Return fallback questions on error
+      return [
+        { id: '1', question: 'What is this document about?' },
+        { id: '2', question: 'Can you summarize the key points?' },
+        { id: '3', question: 'What are the main conclusions?' },
+      ];
+    }
+  }
+
+  async createChatCompletionStream(
+    dto: ChatCompletionDto,
+    callbacks: StreamCallbacks
+  ): Promise<void> {
+    try {
+      this.logger.log(`Creating streaming chat completion with model: ${dto.model}`);
+
+      const messages = dto.messages.map((msg) => ({
+        role: msg.role as 'system' | 'user' | 'assistant' | 'tool',
+        content: msg.content,
+        ...(msg.name && { name: msg.name }),
+      }));
+
+      const stream = await this.client.chat.completions.create({
+        model: dto.model || this.configService.get<string>('app.chat.defaultModel', 'gpt-4o'),
+        messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+        max_tokens: dto.maxTokens ?? this.configService.get<number>('app.chat.maxTokens', 4096),
+        temperature: dto.temperature ?? this.configService.get<number>('app.chat.temperature', 0.7),
+        top_p: dto.topP,
+        stream: true,
+      });
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          callbacks.onChunk(content);
+        }
+      }
+
+      callbacks.onComplete();
+    } catch (error) {
+      this.logger.error(`Streaming chat completion error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      callbacks.onError(error instanceof Error ? error : new Error('Unknown streaming error'));
+    }
   }
 
   async uploadDocument(

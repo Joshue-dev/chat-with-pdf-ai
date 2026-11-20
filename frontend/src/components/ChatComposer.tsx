@@ -4,9 +4,10 @@ type ChatComposerProps = {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
+  disabled?: boolean;
 };
 
-export function ChatComposer({ value, onChange, onSend }: ChatComposerProps) {
+export function ChatComposer({ value, onChange, onSend, disabled = false }: ChatComposerProps) {
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const canSend = value.trim().length > 0;
 
@@ -19,14 +20,14 @@ export function ChatComposer({ value, onChange, onSend }: ChatComposerProps) {
 
   function submit(event?: React.SyntheticEvent<HTMLFormElement>) {
     event?.preventDefault();
-    if (!canSend) return;
+    if (!canSend || disabled) return;
     onSend();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
-    if (!canSend) return;
+    if (!canSend || disabled) return;
     onSend();
   }
 
@@ -39,8 +40,9 @@ export function ChatComposer({ value, onChange, onSend }: ChatComposerProps) {
       <button
         type="button"
         aria-label="Add attachment"
-        className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-[#8a8a8c] transition hover:bg-[#f3f3f5] hover:text-[#1a1a1c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/35 active:scale-95 active:bg-[#e8e8ec]"
-        onClick={() => fieldRef.current?.focus()}
+        disabled={disabled}
+        className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-[#8a8a8c] transition hover:bg-[#f3f3f5] hover:text-[#1a1a1c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/35 active:scale-95 active:bg-[#e8e8ec] disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={() => !disabled && fieldRef.current?.focus()}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
@@ -58,16 +60,18 @@ export function ChatComposer({ value, onChange, onSend }: ChatComposerProps) {
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Ask a question or Use @ to mention document"
-        className="max-h-36 min-h-6 w-full flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-6 text-[#1a1a1c] placeholder:text-[#b0b0b4] focus:outline-none"
+        disabled={disabled}
+        className="max-h-36 min-h-6 w-full flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-6 text-[#1a1a1c] placeholder:text-[#b0b0b4] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="Ask a question"
         enterKeyHint="send"
       />
       <button
         type="submit"
         aria-label="Send message"
-        aria-disabled={!canSend}
+        aria-disabled={!canSend || disabled}
+        disabled={!canSend || disabled}
         className={`grid size-7 shrink-0 place-items-center rounded-full text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/40 focus-visible:ring-offset-2 ${
-          canSend
+          canSend && !disabled
             ? "cursor-pointer bg-[#1c1c1e] hover:bg-black active:scale-95 active:bg-black"
             : "cursor-not-allowed bg-[#b7bac3]"
         }`}

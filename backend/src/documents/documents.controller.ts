@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  Res,
 } from '@nestjs/common';
 import {
   FileFieldsInterceptor,
@@ -25,7 +26,8 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { DocumentsService } from './documents.service';
+import type { Response } from 'express';
+import { DocumentsService, SuggestedQuestion } from './documents.service';
 import { FileValidationPipe } from './guards/file-validation.pipe';
 import type { ValidatedFile } from './guards/file-validation.pipe';
 import { UploadDocumentDto, ChatCompletionDto } from './dto';
@@ -181,6 +183,38 @@ export class DocumentsController {
     return this.documentsService.getDocument(id);
   }
 
+  @Get(':id/suggested-questions')
+  @ApiOperation({ summary: 'Get suggested questions for a document' })
+  @ApiParam({ name: 'id', description: 'OpenAI file ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Suggested questions',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          question: { type: 'string' },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Document not found',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Server error',
+    type: ErrorResponseDto,
+  })
+  async getSuggestedQuestions(@Param('id') id: string): Promise<SuggestedQuestion[]> {
+    this.logger.log(`Get suggested questions request: ${id}`);
+    return this.documentsService.getSuggestedQuestions(id);
+  }
+
   @Get(':id/content')
   @ApiOperation({ summary: 'Download document content' })
   @ApiParam({ name: 'id', description: 'OpenAI file ID' })
@@ -276,5 +310,53 @@ export class DocumentsController {
   async createChatCompletionWithFiles(@Body() dto: ChatCompletionDto): Promise<ChatCompletionResponseDto> {
     this.logger.log(`Chat completion with files request: ${dto.messages.length} messages, files: ${dto.fileIds?.length || 0}`);
     return this.documentsService.createChatCompletionWithFiles(dto);
+  }
+
+  @Post('chat/stream')
+  @ApiOperation({ summary: 'Create a streaming chat completion with file context (SSE)' })
+  @ApiBody({ type: ChatCompletionDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Streaming chat completion',
+    content: {
+      'text/event-stream': {
+        schema: {
+          type: 'string',
+          example: 'data: {"content": "Hello"}\n\ndata: {"content": " world"}\n\ndata: [DONE]\n\n',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Server error',
+    type: ErrorResponseDto,
+  })
+  async createChatCompletionStream(@Body() dto: ChatCompletionDto, @Res() res: Response) {
+    this.logger.log(`Streaming chat completion request: ${dto.messages.length} messages, files: ${dto.fileIds?.length || 0}`);
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    await this.documentsService.createChatCompletionStream(dto, {
+      onChunk: (chunk: string) => {
+        res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+      },
+      onComplete: () => {
+        res.write('data: [DONE]\n\n');
+        res.end();
+      },
+      onError: (error: Error) => {
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.end();
+      },
+    });
   }
 }

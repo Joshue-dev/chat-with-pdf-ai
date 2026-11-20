@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatComposer } from "./ChatComposer";
-import { WelcomeMessage, ChatMessage, TypingIndicator } from "./Message";
+import { EmptyStateMessage, ChatMessage, TypingIndicator } from "./Message";
 import { useChat } from "../hooks/useChat";
 
-export function ChatPanel() {
-  const { messages, pending, sendMessage } = useChat();
+interface ChatPanelProps {
+  fileIds?: string[];
+}
+
+export function ChatPanel({ fileIds }: ChatPanelProps) {
+  const { messages, pending, suggestedQuestions, sendMessage } = useChat({ fileIds });
   const [value, setValue] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
   const hasScrolled = useRef(false);
@@ -24,6 +28,8 @@ export function ChatPanel() {
     setValue("");
   };
 
+  const showEmptyState = messages.length === 0 && !pending;
+
   return (
     <div className="flex h-full w-full flex-1 flex-col md:w-1/2 md:flex-none overflow-hidden">
       <div
@@ -34,14 +40,19 @@ export function ChatPanel() {
         className="min-h-0 flex-1 overscroll-contain px-4 pt-6 pb-4 sm:px-6 md:px-8"
       >
         <div className="flex flex-col gap-6">
-          <WelcomeMessage onAsk={sendMessage} />
-          {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} />
-          ))}
-          {pending ? <TypingIndicator /> : null}
+          {showEmptyState ? (
+            <EmptyStateMessage suggestedQuestions={suggestedQuestions} onAsk={sendMessage} />
+          ) : (
+            <>
+              {messages.map((message) => (
+                <ChatMessage key={message.id} message={message} />
+              ))}
+              {pending ? <TypingIndicator /> : null}
+            </>
+          )}
         </div>
       </div>
-      <ChatComposer value={value} onChange={setValue} onSend={handleSend} />
+      <ChatComposer value={value} onChange={setValue} onSend={handleSend} disabled={pending} />
     </div>
   );
 }

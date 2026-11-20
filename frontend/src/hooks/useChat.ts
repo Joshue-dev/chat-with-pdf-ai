@@ -1,80 +1,162 @@
-import { useState, useCallback, useRef } from "react";
-import type { ConversationMessage } from "../components/Message";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { createChatCompletionStream } from "../services/api";
 
-const initialMessages: ConversationMessage[] = [
-  {
-    id: "user-timeframe",
-    role: "user",
-    text: "What is the estimated timeframe for the entire project from start to finish?",
-  },
-  {
-    id: "assistant-timeframe",
-    role: "assistant",
-    text: "The estimated timeframe for the entire project from start to finish is 3 to 6 weeks. This includes the phases of Discovery and Research (3-7 days), UI/UX Design (1-2 weeks), and Development (1-3 weeks).",
-    citation: "4",
-  },
-];
-
-function simulatedAnswer(question: string): string {
-  const normalized = question.toLowerCase();
-  if (normalized.includes("timeframe") || normalized.includes("start to finish")) {
-    return "The estimated timeframe for the entire project from start to finish is 3 to 6 weeks. This includes the phases of Discovery and Research (3-7 days), UI/UX Design (1-2 weeks), and Development (1-3 weeks).";
-  }
-  if (normalized.includes("approach to developing")) {
-    return "In this sample proposal, Stephen Jude starts with discovery, then shapes a user-centric product narrative before designing and building the interface. This placeholder only illustrates that flow.";
-  }
-  if (normalized.includes("product design strategy") || normalized.includes("key components")) {
-    return "The sample proposal organizes the GOAT Token work into discovery and research, UI/UX design, and development, aimed at a landing page that matches the brand.";
-  }
-  if (normalized.includes("accessibility") || normalized.includes("responsiveness")) {
-    return "The sample proposal plans the landing page so it stays readable and usable across devices, with responsive layouts and accessible interface patterns.";
-  }
-  return `Nothing was sent to an AI service. This placeholder only echoes what you wrote: "${question.trim()}".`;
+export interface ConversationMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  mocked?: boolean;
+  feedback?: boolean;
 }
 
-export function useChat() {
-  const [messages, setMessages] = useState<ConversationMessage[]>(initialMessages);
-  const [pending, setPending] = useState(false);
-  const replyTimer = useRef<number | null>(null);
-  const nextId = useRef(1);
+export interface UseChatOptions {
+  fileIds?: string[];
+  onError?: (error: Error) => void;
+}
 
-  const sendMessage = useCallback((text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    const userMessage: ConversationMessage = {
-      id: `user-${nextId.current++}`,
-      role: "user",
-      text: trimmed,
-    };
-    setMessages((current) => [...current, userMessage]);
-    setPending(true);
-    if (replyTimer.current !== null) window.clearTimeout(replyTimer.current);
-    const answer = simulatedAnswer(trimmed);
-    replyTimer.current = window.setTimeout(() => {
-      setMessages((current) => [
-        ...current,
-        {
-          id: `assistant-${nextId.current++}`,
-          role: "assistant",
-          text: answer,
-          mocked: true,
-          feedback: true,
-        },
-      ]);
-      setPending(false);
-      replyTimer.current = null;
-    }, 900);
-  }, []);
+export function useChat(options: UseChatOptions = {}) {
+  const { fileIds, onError } = options;
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [pending, setPending] = useState(false);
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const streamCleanupRef = useRef<(() => void) | null>(null);
+  const nextId = useRef(1);
+  const messagesRef = useRef<ConversationMessage[]>([]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const resetChat = useCallback(() => {
-    setMessages(initialMessages);
-    nextId.current = 1;
-    if (replyTimer.current !== null) {
-      window.clearTimeout(replyTimer.current);
-      replyTimer.current = null;
+    if (streamCleanupRef.current) {
+      streamCleanupRef.current();
+      streamCleanupRef.current = null;
     }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setMessages([]);
+    setSuggestedQuestions([]);
+    nextId.current = 1;
     setPending(false);
   }, []);
 
-  return { messages, pending, sendMessage, resetChat };
+  const setSuggestedQuestionsFromBackend = useCallback((questions: string[]) => {
+    setSuggestedQuestions(questions);
+  }, []);
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+
+      // Cancel any ongoing stream
+      if (streamCleanupRef.current) {
+        streamCleanupRef.current();
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const userMessage: ConversationMessage = {
+        id: `user-${nextId.current++}`,
+        role: "user",
+        text: trimmed,
+      };
+
+      setMessages((current) => [...current, userMessage]);
+      setPending(true);
+
+      // Add placeholder assistant message that will be updated via streaming
+      const assistantId = `assistant-${nextId.current++}`;
+      let assistantMessage: ConversationMessage = {
+        id: assistantId,
+        role: "assistant",
+        text: "",
+      };
+
+      setMessages((current) => [...current, assistantMessage]);
+
+      abortControllerRef.current = new AbortController();
+
+      let fullResponse = "";
+
+      try {
+        await createChatCompletionStream(
+          {
+            messages: [
+              ...messagesRef.current.map((m) => ({
+                role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant" | "system" | "tool",
+                content: m.text,
+              })),
+              { role: "user" as const, content: trimmed },
+            ],
+            fileIds,
+            stream: true,
+          },
+          (chunk) => {
+            fullResponse += chunk;
+            assistantMessage = { ...assistantMessage, text: fullResponse };
+            setMessages((current) =>
+              current.map((m) => (m.id === assistantId ? assistantMessage : m))
+            );
+          },
+          () => {
+            setPending(false);
+            streamCleanupRef.current = null;
+            abortControllerRef.current = null;
+          },
+          (error) => {
+            const errorMessage: ConversationMessage = {
+              id: assistantId,
+              role: "assistant",
+              text: `Error: ${error.message}`,
+            };
+            setMessages((current) =>
+              current.map((m) => (m.id === assistantId ? errorMessage : m))
+            );
+            setPending(false);
+            streamCleanupRef.current = null;
+            abortControllerRef.current = null;
+            onError?.(error);
+          }
+        );
+      } catch (error) {
+        const errorMessage: ConversationMessage = {
+          id: assistantId,
+          role: "assistant",
+          text: `Error: ${(error as Error).message}`,
+        };
+        setMessages((current) =>
+          current.map((m) => (m.id === assistantId ? errorMessage : m))
+        );
+        setPending(false);
+        onError?.(error as Error);
+      }
+    },
+    [fileIds, onError]
+  );
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (streamCleanupRef.current) {
+        streamCleanupRef.current();
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  return {
+    messages,
+    pending,
+    suggestedQuestions,
+    sendMessage,
+    resetChat,
+    setSuggestedQuestions: setSuggestedQuestionsFromBackend,
+  };
 }
