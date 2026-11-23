@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { createChatCompletionStream } from "../services/api";
+import { sendChatMessageStream } from "../services/api";
 
 export interface ConversationMessage {
   id: string;
@@ -10,12 +10,14 @@ export interface ConversationMessage {
 }
 
 export interface UseChatOptions {
-  fileIds?: string[];
+  documentId?: string;
+  conversationId?: string;
   onError?: (error: Error) => void;
+  onConversationId?: (conversationId: string) => void;
 }
 
 export function useChat(options: UseChatOptions = {}) {
-  const { fileIds, onError } = options;
+  const { documentId, conversationId, onError, onConversationId } = options;
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [pending, setPending] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
@@ -23,10 +25,15 @@ export function useChat(options: UseChatOptions = {}) {
   const streamCleanupRef = useRef<(() => void) | null>(null);
   const nextId = useRef(1);
   const messagesRef = useRef<ConversationMessage[]>([]);
+  const currentConversationIdRef = useRef<string | undefined>(conversationId);
 
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    currentConversationIdRef.current = conversationId;
+  }, [conversationId]);
 
   const resetChat = useCallback(() => {
     if (streamCleanupRef.current) {
@@ -51,6 +58,17 @@ export function useChat(options: UseChatOptions = {}) {
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
+
+      if (!documentId) {
+        onError?.(new Error("No document ID available"));
+        return;
+      }
+
+      const convId = currentConversationIdRef.current;
+      if (!convId) {
+        onError?.(new Error("No conversation ID available"));
+        return;
+      }
 
       // Cancel any ongoing stream
       if (streamCleanupRef.current) {
@@ -84,18 +102,10 @@ export function useChat(options: UseChatOptions = {}) {
       let fullResponse = "";
 
       try {
-        await createChatCompletionStream(
-          {
-            messages: [
-              ...messagesRef.current.map((m) => ({
-                role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant" | "system" | "tool",
-                content: m.text,
-              })),
-              { role: "user" as const, content: trimmed },
-            ],
-            fileIds,
-            stream: true,
-          },
+        await sendChatMessageStream(
+          documentId,
+          convId,
+          trimmed,
           (chunk) => {
             fullResponse += chunk;
             assistantMessage = { ...assistantMessage, text: fullResponse };
@@ -103,7 +113,10 @@ export function useChat(options: UseChatOptions = {}) {
               current.map((m) => (m.id === assistantId ? assistantMessage : m))
             );
           },
-          () => {
+          (returnedConversationId) => {
+            if (returnedConversationId && onConversationId) {
+              onConversationId(returnedConversationId);
+            }
             setPending(false);
             streamCleanupRef.current = null;
             abortControllerRef.current = null;
@@ -136,7 +149,7 @@ export function useChat(options: UseChatOptions = {}) {
         onError?.(error as Error);
       }
     },
-    [fileIds, onError]
+    [documentId, onError, onConversationId]
   );
 
   // Cleanup on unmount

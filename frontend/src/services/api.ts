@@ -1,14 +1,9 @@
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 export interface UploadResponse {
-  id: string;
-  object: string;
-  bytes: number;
-  createdAt: number;
-  filename: string;
-  purpose: string;
-  status: string;
-  statusDetails?: string;
+  documentId: string;
+  conversationId: string;
+  suggestedQuestions: SuggestedQuestion[];
 }
 
 export interface ChatMessage {
@@ -17,29 +12,21 @@ export interface ChatMessage {
   name?: string;
 }
 
-export interface ChatCompletionRequest {
-  messages: ChatMessage[];
-  fileIds?: string[];
-  model?: string;
-  maxTokens?: number;
-  temperature?: number;
-  topP?: number;
-  stream?: boolean;
+export interface SuggestedQuestion {
+  id: string;
+  question: string;
 }
 
-export interface ChatCompletionResponse {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
+export interface DocumentUploadResult {
+  documentId: string;
+  conversationId: string;
+  suggestedQuestions: SuggestedQuestion[];
+}
+
+export interface ChatResponse {
   content: string;
-  role: string;
-  finishReason: string;
-  usage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
+  conversationId: string;
+  messageId: string;
 }
 
 export interface ErrorResponse {
@@ -47,16 +34,6 @@ export interface ErrorResponse {
   message: string;
   statusCode: number;
   details?: Record<string, unknown>;
-}
-
-export interface SuggestedQuestion {
-  id: string;
-  question: string;
-}
-
-export interface DocumentUploadResult {
-  document: UploadResponse;
-  suggestedQuestions: SuggestedQuestion[];
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -74,45 +51,58 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export async function uploadDocument(file: File): Promise<DocumentUploadResult> {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("purpose", "assistants");
+  formData.append("action", "upload");
 
-  const response = await fetch(`${API_BASE}/documents/upload`, {
+  const response = await fetch(`${API_BASE}/document-chat`, {
     method: "POST",
     body: formData,
   });
 
-  const document = await handleResponse<UploadResponse>(response);
-
-  const questionsResponse = await fetch(`${API_BASE}/documents/${document.id}/suggested-questions`);
-  const suggestedQuestions = await handleResponse<SuggestedQuestion[]>(questionsResponse);
-
-  return { document, suggestedQuestions };
+  return handleResponse<DocumentUploadResult>(response);
 }
 
-export async function createChatCompletion(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
-  const response = await fetch(`${API_BASE}/documents/chat/with-files`, {
+export async function sendChatMessage(
+  documentId: string,
+  conversationId: string,
+  message: string
+): Promise<ChatResponse> {
+  const response = await fetch(`${API_BASE}/document-chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify({
+      action: "chat",
+      documentId,
+      conversationId,
+      message,
+      stream: false,
+    }),
   });
 
-  return handleResponse<ChatCompletionResponse>(response);
+  return handleResponse<ChatResponse>(response);
 }
 
-export async function createChatCompletionStream(
-  request: ChatCompletionRequest,
+export async function sendChatMessageStream(
+  documentId: string,
+  conversationId: string,
+  message: string,
   onChunk: (chunk: string) => void,
-  onComplete: () => void,
+  onComplete: (conversationId: string) => void,
   onError: (error: Error) => void
 ): Promise<void> {
-  const response = await fetch(`${API_BASE}/documents/chat/with-files`, {
+  const response = await fetch(`${API_BASE}/document-chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ ...request, stream: true }),
+    body: JSON.stringify({
+      action: "chat",
+      documentId,
+      conversationId,
+      message,
+      stream: true,
+    }),
   });
 
   if (!response.ok) {
@@ -146,14 +136,18 @@ export async function createChatCompletionStream(
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           const data = line.slice(6);
-          if (data === "[DONE]") {
-            onComplete();
-            return;
-          }
           try {
             const parsed = JSON.parse(data);
             if (parsed.content) {
               onChunk(parsed.content);
+            }
+            if (parsed.done) {
+              onComplete(parsed.conversationId);
+              return;
+            }
+            if (parsed.error) {
+              onError(new Error(parsed.error));
+              return;
             }
           } catch {
             // Ignore parsing errors for non-JSON data
@@ -161,21 +155,8 @@ export async function createChatCompletionStream(
         }
       }
     }
-    onComplete();
+    onComplete("");
   } catch (error) {
     onError(error as Error);
   }
-}
-
-export async function deleteDocument(id: string): Promise<{ id: string; deleted: boolean }> {
-  const response = await fetch(`${API_BASE}/documents/${id}`, {
-    method: "DELETE",
-  });
-  return handleResponse(response);
-}
-
-export async function listDocuments(): Promise<UploadResponse[]> {
-  const response = await fetch(`${API_BASE}/documents`);
-  const data = await handleResponse<{ data: UploadResponse[] }>(response);
-  return data.data;
 }

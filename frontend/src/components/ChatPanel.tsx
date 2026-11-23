@@ -4,11 +4,17 @@ import { EmptyStateMessage, ChatMessage, TypingIndicator } from "./Message";
 import { useChat } from "../hooks/useChat";
 
 interface ChatPanelProps {
-  fileIds?: string[];
+  documentId?: string;
+  conversationId?: string;
+  onConversationIdChange?: (conversationId: string) => void;
 }
 
-export function ChatPanel({ fileIds }: ChatPanelProps) {
-  const { messages, pending, suggestedQuestions, sendMessage } = useChat({ fileIds });
+export function ChatPanel({ documentId, conversationId, onConversationIdChange }: ChatPanelProps) {
+  const { messages, pending, suggestedQuestions, sendMessage } = useChat({
+    documentId,
+    conversationId,
+    onConversationId: onConversationIdChange,
+  });
   const [value, setValue] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
   const hasScrolled = useRef(false);

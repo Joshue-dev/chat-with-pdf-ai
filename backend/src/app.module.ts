@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { createObserveModule } from '@nestjs/observe';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DocumentsModule } from './documents/documents.module';
 import configuration from './config/configuration';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
@@ -23,7 +22,6 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       appSecret: 'YOUR_APP_SECRET',
       serviceId: 'backend',
     }),
-    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
