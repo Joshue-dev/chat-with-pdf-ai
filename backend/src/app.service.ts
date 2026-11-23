@@ -1,12 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
-
-interface UploadedFile {
-  buffer: Buffer;
-  originalname: string;
-  mimetype: string;
-  size: number;
-}
+import type { UploadedFile } from './config/types';
 
 @Injectable()
 export class AppService {
@@ -23,25 +17,25 @@ export class AppService {
     });
   }
 
-  async uploadFileToOpenAI(file: UploadedFile): Promise<string> {
+  async uploadFileToOpenAI(file: UploadedFile): Promise<{ fileId: string; text: string }> {
     const fileBlob = new Blob([new Uint8Array(file.buffer)], { type: file.mimetype });
     const fileObj = new File([fileBlob], file.originalname, { type: file.mimetype });
 
     const response = await this.client.files.create({
       file: fileObj,
-      purpose: 'assistants',
+      purpose: 'user_data',
     });
-    return response.id;
+
+    // Extract text locally since files.content() doesn't work with assistants/user_data purposes
+    const text = new TextDecoder().decode(file.buffer);
+
+    return { fileId: response.id, text };
   }
 
-  async generateSuggestedQuestions(fileId: string, filename: string): Promise<Array<{id: string, question: string}>> {
+  async generateSuggestedQuestions(fileId: string, filename: string, text: string): Promise<Array<{id: string, question: string}>> {
     try {
-      const document = await this.client.files.retrieve(fileId);
-      const content = await this.client.files.content(fileId);
-      const text = await content.text();
-
       const response = await this.client.chat.completions.create({
-        model: 'gpt-4o',
+        model: process.env.OPENAI_CHAT_MODEL || 'gpt-6.2-astra',
         messages: [
           {
             role: 'system',
@@ -52,8 +46,6 @@ export class AppService {
             content: `Generate 3 suggested questions for this document (filename: ${filename}):\n\n${text.slice(0, 8000)}`,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 500,
         response_format: { type: 'json_object' },
       });
 
@@ -65,11 +57,7 @@ export class AppService {
       ];
     } catch (error) {
       console.error('Failed to generate suggested questions:', error);
-      return [
-        { id: '1', question: 'What is this document about?' },
-        { id: '2', question: 'Can you summarize the key points?' },
-        { id: '3', question: 'What are the main conclusions?' },
-      ];
+      throw new Error('Failed to generate suggested questions');
     }
   }
 }

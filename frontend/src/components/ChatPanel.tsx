@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatComposer } from "./ChatComposer";
 import { EmptyStateMessage, ChatMessage, TypingIndicator } from "./Message";
-import { useChat } from "../hooks/useChat";
-
 interface ChatPanelProps {
   documentId?: string;
   conversationId?: string;
@@ -10,11 +8,11 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ documentId, conversationId, onConversationIdChange }: ChatPanelProps) {
-  const { messages, pending, suggestedQuestions, sendMessage } = useChat({
-    documentId,
-    conversationId,
-    onConversationId: onConversationIdChange,
-  });
+  // const { messages, pending, suggestedQuestions, sendMessage } = useChat({
+  //   documentId,
+  //   conversationId,
+  //   onConversationId: onConversationIdChange,
+  // });
   const [value, setValue] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
   const hasScrolled = useRef(false);

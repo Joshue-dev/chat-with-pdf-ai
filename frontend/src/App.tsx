@@ -22,6 +22,7 @@ function App() {
     setIsUploading(true);
     setUploadError(null);
     try {
+      console.info("Uploading file:", file);
       const result = await uploadDocument(file);
       const newDocument = createDocumentFromFile(file);
       setDocument(newDocument);
