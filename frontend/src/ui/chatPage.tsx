@@ -4,7 +4,7 @@ import { ChatComposer } from "../components/ChatComposer";
 import {
   ChatMessage,
   TypingIndicator,
-  EmptyStateMessage,
+  DocumentWelcomeMessage,
   type ConversationMessage,
 } from "../components/Message";
 
@@ -104,7 +104,7 @@ export const ChatPage = () => {
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-6 pb-4 sm:px-6 md:px-8"
         >
           <div className="flex flex-col gap-8">
-            <EmptyStateMessage suggestedQuestions={[]} onAsk={sendMessage} />
+            <DocumentWelcomeMessage suggestedQuestions={[]} onSetInput={setValue} />
             {messages.map((message) => (
               <ChatMessage key={message.id} message={message} />
             ))}

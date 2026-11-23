@@ -13,6 +13,7 @@ function App() {
   const [document, setDocument] = useState<IDocument | null>(null);
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [suggestedQuestions, setSuggestedQuestions] = useState<object[]>([]);
   const [isDark, toggleTheme] = useDarkMode();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -22,12 +23,12 @@ function App() {
     setIsUploading(true);
     setUploadError(null);
     try {
-      console.info("Uploading file:", file);
       const result = await uploadDocument(file);
       const newDocument = createDocumentFromFile(file);
       setDocument(newDocument);
       setDocumentId(result.documentId);
       setConversationId(result.conversationId);
+      setSuggestedQuestions(result.suggestedQuestions);
       setUploadError(null);
     } catch (error) {
       setUploadError((error as Error).message);
@@ -67,6 +68,7 @@ function App() {
               documentId={documentId ?? undefined}
               conversationId={conversationId ?? undefined}
               onConversationIdChange={setConversationId}
+              suggestedQuestions={suggestedQuestions}
             />
             <DocumentPanel
               document={document}

@@ -18,7 +18,13 @@ export function AssistantAvatar() {
       className="grid size-10 shrink-0 place-items-center rounded-full bg-black text-white"
       aria-hidden="true"
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
         <path
           fill="currentColor"
           d="M3.4 5.4A2.4 2.4 0 0 1 5.8 3h7.1a2.4 2.4 0 0 1 2.4 2.4v6.6a2.4 2.4 0 0 1-2.4 2.4H8.3l-2.7 2.3c-.5.42-1.25.06-1.25-.58v-1.72A2.4 2.4 0 0 1 3.4 12V5.4Z"
@@ -51,8 +57,22 @@ export function UserAvatar() {
 
 function IconCopy() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.7" />
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="9"
+        y="9"
+        width="11"
+        height="11"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
       <path
         d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15"
         stroke="currentColor"
@@ -65,7 +85,13 @@ function IconCopy() {
 
 function IconCheck() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M5 12.5 9.2 17 19 7"
         stroke="currentColor"
@@ -77,7 +103,13 @@ function IconCheck() {
   );
 }
 
-function IconThumb({ down = false, filled = false }: { down?: boolean; filled?: boolean }) {
+function IconThumb({
+  down = false,
+  filled = false,
+}: {
+  down?: boolean;
+  filled?: boolean;
+}) {
   return (
     <svg
       width="16"
@@ -141,7 +173,9 @@ export function MessageActions({ text }: { text: string }) {
         className={`${actionButtonClass} ${vote === "down" ? "text-[#5314a1]" : ""}`}
         aria-label="Mark response as unhelpful"
         aria-pressed={vote === "down"}
-        onClick={() => setVote((current) => (current === "down" ? null : "down"))}
+        onClick={() =>
+          setVote((current) => (current === "down" ? null : "down"))
+        }
       >
         <IconThumb down filled={vote === "down"} />
       </button>
@@ -149,49 +183,47 @@ export function MessageActions({ text }: { text: string }) {
   );
 }
 
-export function EmptyStateMessage({
+export function DocumentWelcomeMessage({
   suggestedQuestions,
-  onAsk,
+  onSetInput,
 }: {
-  suggestedQuestions: string[];
-  onAsk: (question: string) => void;
+  suggestedQuestions: { id: number; question: string }[];
+  onSetInput: (question: string) => void;
 }) {
-  const intro = [
-    "Hello! I'm your document assistant. Upload a document to get started, and I'll help you understand its contents.",
-    "Once you upload a document, I can answer questions about it, provide summaries, and help you find specific information.",
-  ];
-  const closing = "Upload a document to begin!";
+  const intro =
+    "Hello! I'm your document assistant. I've analyzed your document and I'm ready to help you understand its contents.";
 
   return (
-    <article className="flex items-start gap-4" aria-label="Assistant introduction">
+    <article
+      className="flex items-start gap-4"
+      aria-label="Assistant introduction"
+    >
       <AssistantAvatar />
       <div className="min-w-0 flex-1 pt-1.5 max-w-[85%]">
         <span className="sr-only">Assistant</span>
         <div className="space-y-4 text-[15px] leading-6 text-[#1a1a1c] dark:text-white">
-          {intro.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
+          <p>{intro}</p>
         </div>
-        <MessageActions text={intro.join("\n\n")} />
+        <MessageActions text={intro} />
         {suggestedQuestions.length > 0 && (
           <div className="mt-6 text-[15px] leading-6 text-[#1a1a1c] dark:text-white">
             <p>Suggested questions:</p>
-            <div className="mt-1 flex flex-col items-start gap-1">
-              {suggestedQuestions.map((question, index) => (
-                <button
-                  key={question}
-                  type="button"
-                  className="cursor-pointer rounded-sm text-left text-[#1a1a1c] dark:text-white underline decoration-[#1a1a1c] dark:decoration-white underline-offset-[3px] hover:text-[#5314a1] hover:decoration-[#5314a1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/35 active:text-[#3b0d78]"
-                  onClick={() => onAsk(question)}
+            <ol className="mt-1 flex flex-col items-start gap-1 list-decimal">
+              {suggestedQuestions.map((item, index) => (
+                <li
+                  key={index}
+                  className="cursor-pointer rounded-sm text-left text-[#1a1a1c] dark:text-white underline decoration-[#1a1a1c] dark:decoration-white underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5314a1]/35 active:text-[#3b0d78]"
+                  onClick={() => onSetInput(item.question)}
                 >
-                  {index + 1}. {question}
-                </button>
+                  {item.question}
+                </li>
               ))}
-            </div>
-            <p className="mt-5">{closing}</p>
+            </ol>
           </div>
         )}
-        <MessageActions text={suggestedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")} />
+        <MessageActions
+          text={suggestedQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}
+        />
       </div>
     </article>
   );
@@ -210,7 +242,10 @@ export function ChatMessage({ message }: { message: ConversationMessage }) {
 
   if (isUser) {
     return (
-      <article className="flex items-end gap-3 justify-end" aria-label="Your message">
+      <article
+        className="flex items-end gap-3 justify-end"
+        aria-label="Your message"
+      >
         <div className="min-w-0 max-w-[85%]">
           <div className="w-fit max-w-full rounded-2xl bg-[#5314a1] px-4 py-2.5 text-[15px] leading-6 whitespace-pre-wrap text-white">
             {message.text}
@@ -243,7 +278,10 @@ export function ChatMessage({ message }: { message: ConversationMessage }) {
 
 export function TypingIndicator() {
   return (
-    <article className="flex items-start gap-4" aria-label="Assistant is typing">
+    <article
+      className="flex items-start gap-4"
+      aria-label="Assistant is typing"
+    >
       <AssistantAvatar />
       <div className="min-w-0 max-w-[85%]">
         <div className="w-fit rounded-2xl bg-[#f5f5f7] dark:bg-[#2a2a2e] px-4 py-2.5">
